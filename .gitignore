@@ -1,0 +1,9 @@
+# 审计/实验室产物（不随代码走）
+_debug/
+_repair/
+_upgrade-probe/
+_pre-upgrade-backup-*/
+tools/lab/
+_lab-dont-run/
+node_modules/
+*.log

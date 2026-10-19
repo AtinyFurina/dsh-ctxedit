@@ -1,0 +1,13 @@
+# dsh-ctxedit bundle patch：把插件行插入 profile 组合。
+#
+# 两种挂载方式都支持：
+#   1) 作为 profile 的相对路径行（当前用法）：profile 的 cordis.patch.yml 里写
+#        - id: dsh-ctxedit
+#          name: ./plugins/dsh-ctxedit/lib/index.js
+#   2) 作为 bundle（把本包放进 profile 的依赖树后）：本文件会被当作 bundle patch 应用。
+#
+# 回退：删掉对应 insert 段即可；插件文件留着不影响启动。
+- insert:
+    - id: dsh-ctxedit
+      name: '@atinyfurina/dsh-ctxedit'
+      config: {}
