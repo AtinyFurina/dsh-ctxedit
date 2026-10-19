@@ -133,14 +133,11 @@ phase.lastTurn = authoritative
 
 ## 工具（`tools/`）
 
-这些脚本是当初把机制试出来的家伙，留着以便升级后复查：
+常用入口（**完整清单见 [MANIFEST.md](MANIFEST.md)，共 17 个脚本**）：
 
 | 脚本 | 用途 |
 |---|---|
 | `verify-host.mjs` | **升级后自检**：读会话日志 → 打 `/find` `/diagnose` → 判定计数器同步是否仍可用 |
-| `verify-prompt-modes.mjs` | **提问侧三模式复验**：在日志副本上模拟 就地改 / 改并回退 / 撤回，用安装版校验器判定 |
-| `verify-template.mjs` | 拿真实会话日志 + 真实校验器，验证「写入模板」是否被接受 |
-| `fix-turns.mjs` | 修复「重复轮次号」（先 dry-run，`--write` 才落盘；需 DSH 已关闭） |
-| `repair-dup.mjs` | 清理同 messageId 的重复可见版本 |
-| `test-restore.mjs` | 离线验证「还原」路径 |
 | `check-log.mjs` | 打印任意会话日志的轮次结构 / 可见节点 / 替换事件 |
+| `test-restore.mjs` | **固定场景回归测试**：真实日志副本上跑 改写 → `/find` 血统 → 还原 → `fromRestore`；需要真实日志入参（运行方式见脚本头，app.asar 需 Electron-as-node） |
+| `fix-turns.mjs` | 修复「重复轮次号」（先 dry-run，`--write` 才落盘；需 DSH 已关闭） |
