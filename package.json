@@ -1,6 +1,6 @@
 {
   "name": "@atinyfurina/dsh-ctxedit",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "DeepSeek Harness plugin: per-message context editing for the model-visible history — rewrite a reply (text + reasoning), rewrite/retract the turn's user prompt with Claude-Code-style rewind, or delete a node. Original log content is never modified.",
   "type": "module",
@@ -41,5 +41,6 @@
   },
   "license": "MIT"
 }
+
 
 

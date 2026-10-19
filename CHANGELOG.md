@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 0.5.1 — 2026-10-19
+
+**修复「还原原样」：血统反查 + `replacedBy`。**
+
+- `shadowLineage` 改为从载体反查：改写/还原时在遮蔽载体上写 `source.replacedBy`，
+  `/find` 的 `history.rewrites` / `originSeq` 由此计算（提交 `3b2795e`）。
+- 限制：0.5.1 之前做过的改写没有 `replacedBy`，无法还原（见 README「已知限制」）。
+- `tools/test-marker.mjs` 修复裁剪后仍拼未裁剪事件导致的 seq 重号。
+
 ## 0.5.0 — 2026-10-19
 
 **「更改输出」面板 UI 收尾。**
