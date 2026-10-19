@@ -27,6 +27,19 @@
 | POST | `/api/dsh-ctxedit/rewind-here` | 就地回溯：区间遮蔽 + 标记 + `zones` 记录 |
 | GET | `/api/dsh-ctxedit/zones?sessionId=` | 返回隐藏区域与死轮次（`deadTurns`） |
 
+`/apply` 的 `mode` 取值：
+
+| mode | 作用 | 写合成轮次 | 需要 `text` |
+|---|---|---|---|
+| `rewrite` | 改写助手回复（正文+思考），角色仍为 assistant | 是（同步计数器） | 是 |
+| `delete` | 抹掉助手回复 | 否 | 否 |
+| `restore` | 还原被遮蔽的原始回复 | 是（同步计数器） | 否 |
+| `edit-prompt` | 就地改本轮提问（旧模式，UI 不再使用） | 否 | 是 |
+| `rewind-edit` | 用新文字替换本轮提问并回退（旧模式） | 否 | 是 |
+| `rewind-delete` | 撤回本轮提问并回退（旧模式） | 否 | 否 |
+
+全部路由只接受回环地址 + 同源请求（改会话内容的路由，不对 LAN 开放）。
+
 > **兼容性**：DSH `0.2.0-rc.2` 与 `0.2.1-rc.2` 均已实测跑通（0.2.1 上 `find`/`diagnose` 正常、
 > `phase`/`loopCtx` 可访问、轮次号无重复）。0.2.1 的安装版与 npm 包在 `surface.js` /
 > `v3-to-v4` / `agent-loop` 三个关键文件上逐字节一致。证据见
@@ -83,7 +96,7 @@ phase.lastTurn = authoritative
 
 - 只在 `phase.kind === 'idle'` 时赋值 —— 轮次跑着的时候改计数器会污染在跑的轮次，这时直接拒绝；
 - 全程 try/catch。字段名或结构一变（DSH 升级），同步函数返回 `ok: false` 而**不抛错**，接口会附带一句 warning 提示「需要重开会话」；
-- 只读探针 `GET /api/dsh-ctxedit/diagnose?messageId=…` 可以随时确认现场：`phaseKind` / `phaseLastTurn` / `projectedLastTurn` / `canSync`。
+- 只读探针 `diagnose?messageId=…` 可以随时确认现场：`phaseKind` / `phaseLastTurn` / `projectedLastTurn` / `canSync`。
 
 > ⚠ **升级 DSH 后第一件事**：先跑一次 `/diagnose`。若 `hasPhase: false` 或 `canSync: false`，
 > 说明宿主内部结构变了，同步会静默降级 → 此时每次改写后必须**重开会话**再继续对话。
@@ -96,29 +109,6 @@ phase.lastTurn = authoritative
 - **被改写的原消息若含工具调用**，工具调用/结果块不会跟着回到上下文（伪造「我调用过某工具」会被校验器挑出来）。
 - **改写后新消息的 messageId 是全新的**（这是刻意的）。早期版本复用了原 id，客户端按 id 认消息 → 把改写版当成旧版「重新生成」，用户的新内容会消失。实测踩过。
 - **`stream` 按 content 现场生成**（block-end 序列）。现行 v4 读路径不复放 stream，但历史代迁移校验器会把 stream 重放成 blocks 与 content 深比较，自洽才安全。
-
----
-
-## 接口
-
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| GET | `/api/dsh-ctxedit/find?messageId=…` | 定位这条消息所属的活会话，返回节点正文/思考/血统，以及**本轮提问**的 seq 与文本 |
-| POST | `/api/dsh-ctxedit/apply` | `{ messageId, mode, text?, reasoning? }`，`mode` 见下表 |
-| GET | `/api/dsh-ctxedit/diagnose?messageId=…` | **只读**：agent/phase/投影现场，判定能否同步计数器 |
-
-`mode` 取值：
-
-| mode | 作用 | 写合成轮次 | 需要 `text` |
-|---|---|---|---|
-| `rewrite` | 改写助手回复（正文+思考），角色仍为 assistant | 是（同步计数器） | 是 |
-| `delete` | 抹掉助手回复 | 否 | 否 |
-| `restore` | 还原被遮蔽的原始回复 | 是（同步计数器） | 否 |
-| `edit-prompt` | 就地改本轮提问 | 否 | 是 |
-| `rewind-edit` | 用新文字替换本轮提问，并回退到此处 | 否 | 是 |
-| `rewind-delete` | 撤回本轮提问并回退到此处 | 否 | 否 |
-
-全部路由只接受回环地址 + 同源请求（改会话内容的路由，不对 LAN 开放）。
 
 ---
 
