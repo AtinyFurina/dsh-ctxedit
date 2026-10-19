@@ -85,10 +85,12 @@ function simulate(mode) {
   return { events: [...base, carrier], carrier, shadowed: shadowed.length, from: startSeq, to: end };
 }
 
+let failed = 0;
 for (const mode of ['edit-prompt', 'rewind-edit', 'rewind-delete']) {
   const r = simulate(mode);
-  if (r.err) { console.log(`❌ ${mode}: ${r.err}`); continue }
+  if (r.err) { console.log(`❌ ${mode}: ${r.err}`); failed += 1; continue }
   const verdict = check(r.events);
+  if (!String(verdict).startsWith('PASS')) failed += 1;
   const all = derive(r.events);
   const tail = all.slice(-3);
   console.log(`=== ${mode} ===`);
@@ -99,9 +101,21 @@ for (const mode of ['edit-prompt', 'rewind-edit', 'rewind-delete']) {
   const hasOld = all.some((x) => x.includes('举个例子，claude code 的rewind'));
   const last = tail[tail.length - 1] ?? '';
   if (mode === 'edit-prompt') {
+    const ok = hasNew && !hasOld && tail.some((x) => x.startsWith('assistant:'));
+    if (!ok) failed += 1;
     console.log(`  判定: 新文字${hasNew ? '在 ✅' : '不在 ❌'}；旧文字${hasOld ? '仍在 ❌' : '已消失 ✅'}；后续回复${tail.some((x) => x.startsWith('assistant:')) ? '仍在 ✅' : '丢失 ❌'}`);
   }
-  if (mode === 'rewind-edit') console.log(`  判定: ${last.startsWith('user:【复验】') && !hasOld ? '✅ 模型末尾只剩新提问（整轮已回退）' : '❌ 末尾不是新提问：' + last}`);
-  if (mode === 'rewind-delete') console.log(`  判定: ${!hasNew && !hasOld ? '✅ 提问及之后内容都不在模型视野' : '❌ 仍能看到被撤回内容'}`);
+  if (mode === 'rewind-edit') {
+    const ok = last.startsWith('user:【复验】') && !hasOld;
+    if (!ok) failed += 1;
+    console.log(`  判定: ${ok ? '✅ 模型末尾只剩新提问（整轮已回退）' : '❌ 末尾不是新提问：' + last}`);
+  }
+  if (mode === 'rewind-delete') {
+    const ok = !hasNew && !hasOld;
+    if (!ok) failed += 1;
+    console.log(`  判定: ${ok ? '✅ 提问及之后内容都不在模型视野' : '❌ 仍能看到被撤回内容'}`);
+  }
   console.log('');
 }
+console.log(failed === 0 ? '全部通过' : `${failed} 项失败`);
+process.exit(failed === 0 ? 0 : 1);

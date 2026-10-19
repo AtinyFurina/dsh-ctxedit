@@ -65,7 +65,7 @@ function carrier(list, { text, startSeq, endSeq, shadowed }) {
 const turnsEnd = ev.filter((e) => e.type === 'turn/end').map((e) => e.seq);
 const lastClosed = turnsEnd.length ? turnsEnd[turnsEnd.length - 1] : 0;
 const anchor = [...ev].reverse().find((e) => e.seq < lastClosed && e.type === 'assistant/message');
-if (!anchor) { console.log('找不到已闭合轮次里的助手消息'); process.exit(0) }
+if (!anchor) { console.log('SKIP: 找不到已闭合轮次里的助手消息'); process.exit(2) }
 const prompt = promptOf(ev, null, anchor.seq);
 console.log(`锚点助手 seq=${anchor.seq}（t${anchor.data?.turn}），提问 seq=${prompt?.seq} 文本=${JSON.stringify((prompt?.text ?? '').slice(0, 50))}`);
 
@@ -94,3 +94,4 @@ const NEW = '【提问侧验证】这是改写后的提问。';
 trial('A. edit-prompt（只换提问）', carrier(ev, { text: NEW, startSeq: prompt.seq, endSeq: prompt.seq, shadowed: [prompt.seq] }));
 trial('B. rewind-edit（换提问 + 回退到此处）', carrier(ev, { text: NEW, startSeq: prompt.seq, endSeq: lastNode, shadowed: nodes.slice(idx) }));
 trial('C. rewind-delete（撤回提问 + 回退）', carrier(ev, { text: '', startSeq: prompt.seq, endSeq: lastNode, shadowed: nodes.slice(idx) }));
+

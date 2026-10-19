@@ -57,7 +57,7 @@ if (baseEvents.length !== ev.length) console.log(`（模拟前裁掉未闭合尾
 const nodes = foldNodes(baseEvents);
 const bySeq = new Map(baseEvents.map((e) => [e.seq, e]));
 const target = [...nodes].reverse().map((s) => bySeq.get(s)).find((e) => e?.type === 'assistant/message' && (e.data?.message?.content ?? []).some((c) => c.type === 'text' && c.text.trim().length > 0));
-if (!target) { console.log('没有可用的助手消息'); process.exit(0) }
+if (!target) { console.log('SKIP: 没有可用的助手消息'); process.exit(2) }
 
 const NEW_TEXT = '【界面标记验证】这是改写后的正文。';
 const MARK_TEXT = '〔系统提示〕已改写这条回复：模型下一轮读新版内容（界面保留原文，原始记录未改动）。';
@@ -77,7 +77,7 @@ const batch = [
   { type: 'user/message', seq: seq++, time: now, surfaceOp: 'append', data: { id: randomUUID(), role: 'user', content: [{ type: 'text', text: MARK_TEXT }], source: { kind: 'plugin:ctxedit-marker' } } },
   { type: 'user/message', seq: seq++, time: now, surfaceOp: { op: 'replace', startSeq: markSeq, endSeq: markSeq }, sourceEventSeqs: [markSeq], data: { id: randomUUID(), role: 'user', content: [], source: { kind: 'plugin:ctxedit' } } },
 ];
-const log = [...ev, ...batch];
+const log = [...baseEvents, ...batch];
 
 console.log(`目标 seq=${target.seq}（${target.type}）｜追加 seq ${carrierSeq}..${seq - 1}｜合成轮次 ${turn}`);
 let ok = true;
@@ -95,3 +95,5 @@ console.log('标记事件本身存在（界面会渲染）：', log.some((e) => 
 const starts = log.filter((e) => e.type === 'turn/start').map((e) => e.data.turn);
 console.log('轮次号连续无重复：', starts.join(',') === starts.map((_, k) => k + 1).join(','), '→', starts.slice(-4).join(','));
 process.exit(ok ? 0 : 1);
+
+

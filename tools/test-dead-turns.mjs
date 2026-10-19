@@ -63,7 +63,7 @@ function fold(list) {
 }
 const bySeq = new Map(events.map((e) => [e.seq, e]));
 const target = [...fold(events)].reverse().map((s) => bySeq.get(s)).find((e) => e?.type === 'assistant/message');
-if (!target) { console.log('没有助手消息'); process.exit(0) }
+if (!target) { console.log('SKIP: 没有助手消息'); process.exit(2) }
 console.log(`目标助手消息 seq=${target.seq} turn=${target.data.turn}`);
 
 {
@@ -86,3 +86,4 @@ console.log(`目标助手消息 seq=${target.seq} turn=${target.data.turn}`);
 
 console.log(fail === 0 ? '\n全部通过' : `\n${fail} 项失败`);
 process.exit(fail === 0 ? 0 : 1);
+

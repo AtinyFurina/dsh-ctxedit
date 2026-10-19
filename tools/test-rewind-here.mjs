@@ -68,7 +68,7 @@ const nodes = fold(events);
 const bySeq = new Map(events.map((e) => [e.seq, e]));
 const users = nodes.map((s) => bySeq.get(s)).filter((e) => e?.type === 'user/message' && typeof e.data?.id === 'string');
 const target = users[Math.max(0, users.length - 3)];
-if (!target) { console.log('没有用户消息'); process.exit(0) }
+if (!target) { console.log('SKIP: 没有用户消息'); process.exit(2) }
 console.log(`目标用户消息 seq=${target.seq} id=${target.data.id}`);
 
 {
@@ -114,3 +114,4 @@ console.log(`目标用户消息 seq=${target.seq} id=${target.data.id}`);
 
 console.log(fail === 0 ? '\n全部通过' : `\n${fail} 项失败`);
 process.exit(fail === 0 ? 0 : 1);
+
