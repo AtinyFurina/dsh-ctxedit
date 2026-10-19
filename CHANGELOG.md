@@ -2,16 +2,28 @@
 
 ## 0.5.0 — 2026-10-19
 
-**「改上下文」面板 UI 收尾。**
+**「更改输出」面板 UI 收尾。**
 
 - 删除「本轮的提问」编辑区及「就地改提问 / 改并回退 / 撤回提问」三个按钮（提问回退已由消息上的「↩ 回溯」承担）。
-- 样式改用 DSH 主题 token（`--dsw-alias-bg-base`、`-label-*`、`-separator-primary`、`-state-business/error/warn`、
-  `-markdown-code-block`），亮色/暗色自动跟随；卡片加宽到 1040px，按钮/字号/间距贴近聊天 UI。
-- 正文与思考改为「源码 + 预览」并排编辑器：左侧原文（符号完整保留），右侧实时渲染 Markdown；
-  窄屏（<760px）自动堆叠。
-- Markdown 优先复用平台 `@deepseek-ai/dsh-client-ui-primitives` 的 `MarkdownText`，取不到或渲染抛错时
-  回退到内置渲染器（标题/列表/引用/围栏代码/行内代码/粗斜体/链接/分隔线）。
+- 样式改用 DSH 主题 token（`--dsw-alias-settings-card-fill`、`-label-*`、`-border-l2/l3`、`-state-business/error/warn`、
+  `-markdown-code-block`、`-tooltip-bg`），亮色/暗色自动跟随；卡片 1100px、88vh 固定高，编辑区撑满。
+- 正文与思考改为**左侧导航 + 右侧编辑/预览切换**（设置页同款两栏）：编辑时是源码（符号完整保留），
+  预览时渲染 Markdown；窄屏（<820px）导航变横向标签。
+- 面板字号跟随 DSH 的「字号大小」设置（`--dsh-content-font-size` / `-secondary`）。
+- Markdown 优先复用平台 `@deepseek-ai/dsh-client-ui-primitives` 的 `MarkdownText`（平台 Tooltip 同理），
+  取不到或渲染抛错时回退到内置渲染器（标题/列表/引用/围栏代码/行内代码/粗斜体/链接/分隔线）。
 - 新增离线单测 `tools/test-markdown.mjs`（抽取内置渲染器，检查节点结构）。
+
+## 0.4.1 — 2026-10-19
+
+**就地回溯（rewind-here）+ 界面视图过滤。**
+
+- 新增 `POST /api/dsh-ctxedit/rewind-here`：以「目标消息」为锚点做区间遮蔽，并在子事件里写一条
+  「界面可见、模型不可见」的标记行；区域记入 `~/.dsh/dsh-ctxedit/zones.json`。
+- 新增 `GET /api/dsh-ctxedit/zones`：返回区域的 `hiddenKeys` / `hiddenTurns`，以及被本插件遮蔽的
+  `deadTurns`（改写后旧轮次，客户端隐藏其非用户行，解决「改写后复制一条」）。
+- 客户端改为「消息左侧常显回溯图标」；DOM 视图过滤（`[data-chat-flow-key]`、`data-chat-turn`）按 key/轮次隐藏行。
+- fork 回溯（`/rewind`）保留但 UI 不再使用。
 
 ## 0.4.0 — 2026-10-19
 
@@ -20,7 +32,7 @@
 - 新增输入框左侧「回退」入口（`conversation.input.left`，会话作用域槽位拿 `sessionId`）。
 - 新增 `GET /api/dsh-ctxedit/prompts`：按轮次列出真正的人类提问（跳过注入上下文/steering），
   每条带 `promptSeq` 与 `boundarySeq`（该轮 `turn/start` 之前最后一个事件的 seq）。
-- 新增 `POST /api/dsh-ctxedit/rewind`：以 `boundarySeq` 调 `ctx.sessions.fork` 创建**更短的新会话**
+- 新增 `POST /api/dsh-ctxedit/rewind`：以 `boundarySeq` 调 `ctx.sessionController.fork` 创建**更短的新会话**
   （平台原生能力），并在子会话里追加一条「界面可见、模型不可见」的标记行；
   支持 `keep`（复制提问原文）/ `resend`（改完直接发）/ `notext`（连同提问一起撤回）。
 - 客户端面板：提问列表 + 三动作（回退 / 回退并改 / 撤回），成功后用 `uiWorkspace.openSession`
