@@ -74,6 +74,7 @@ const nodes = foldNodes(ev);
 const idx = nodes.indexOf(prompt.seq);
 const lastNode = nodes[nodes.length - 1];
 
+let failed = 0;
 function trial(label, event) {
   const log = [...ev, event];
   let rel = 'PASS';
@@ -86,6 +87,8 @@ function trial(label, event) {
     const tail = msgs.slice(-4).map((m) => `${m.role}:${(m.content ?? []).filter((c) => c.type === 'text').map((c) => c.text).join('').slice(0, 34)}`);
     derived = tail.join(' | ');
   } catch (e) { derived = 'FAIL: ' + String(e?.message ?? e).slice(0, 110) }
+  if (rel !== 'PASS') failed += 1;
+  if (derived.startsWith('FAIL')) failed += 1;
   console.log(`\n--- ${label}（载体 seq=${event.seq}）---`);
   console.log('关系校验:', rel);
   console.log('模型末尾:', derived);
@@ -95,5 +98,8 @@ const NEW = '【提问侧验证】这是改写后的提问。';
 trial('A. edit-prompt（只换提问）', carrier(ev, { text: NEW, startSeq: prompt.seq, endSeq: prompt.seq, shadowed: [prompt.seq] }));
 trial('B. rewind-edit（换提问 + 回退到此处）', carrier(ev, { text: NEW, startSeq: prompt.seq, endSeq: lastNode, shadowed: nodes.slice(idx) }));
 trial('C. rewind-delete（撤回提问 + 回退）', carrier(ev, { text: '', startSeq: prompt.seq, endSeq: lastNode, shadowed: nodes.slice(idx) }));
+
+console.log(failed === 0 ? '\n全部通过' : `\n${failed} 项失败`);
+process.exit(failed === 0 ? 0 : 1);
 
 

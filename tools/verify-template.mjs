@@ -140,7 +140,8 @@ check('同一 messageId 不再重复可见', () => {
   const ids = nodesNow.map((s) => log[s]).filter((e) => e?.type === 'assistant/message').map((e) => e.data?.message?.id);
   const dup = ids.filter((id, k) => ids.indexOf(id) !== k);
   if (dup.length) throw new Error('仍有重复 id: ' + JSON.stringify([...new Set(dup)]));
-  return '可见助手消息 ' + ids.length + ' 条，id 全唯一（原 id ' + originalId + ' 已不在其中: ' + !ids.includes(originalId) + '）';
+  if (ids.includes(originalId)) throw new Error(`原 messageId ${originalId} 仍在可见面上（应已被遮蔽）`);
+  return '可见助手消息 ' + ids.length + ' 条，id 全唯一（原 id 已不在其中）';
 });
 
 console.log('\n=== 校验结果 ===');
