@@ -55,7 +55,7 @@ DSH 的会话日志分两层：落盘的事件日志（append-only）与**模型
 - 追加一条带 `surfaceOp: { op: 'replace', startSeq, endSeq }` + `sourceEventSeqs` 的事件，就能把旧节点从 surface 上**遮蔽**掉；
 - 遮蔽后 `session.deriveMessages()` 里那个节点消失，模型就看不到它了。
 
-这套写法有三条硬约束（全部实测撞出来的）：
+这套写法有四条硬约束（全部实测撞出来的）：
 
 1. **只有非 assistant 载体能做替换**。`assistant/message` 一旦带 `sourceEventSeqs` 会被拒：
    `assistant/message embeds its source stream and cannot carry sourceEventSeqs`。
@@ -66,6 +66,10 @@ DSH 的会话日志分两层：落盘的事件日志（append-only）与**模型
 2. **模型可见的 assistant 内容必须落在「开着的 turn + step」里**，且 `turn/step` 要与当前开着的完全一致。
    插件自己开一个**合成轮次**来承载改写后的消息。
 3. **合成轮次必须带结算字段**：`data.turn`、`data.step`、`message`、`stream`（数组，且与 content 自洽）。
+4. **`source.replacedBy` 是血统指针。** 改写/还原是「先 append 新消息，再用空载体遮蔽旧节点」；
+   新节点与旧节点在日志里没有天然指针，所以载体上记 `source.replacedBy = 新节点 seq`。
+   `/find` 反过来按这个字段一路回溯到最初的助手消息，得到 `history.rewrites` / `originSeq`。
+   旧日志没有该字段 → `rewrites` 为 0。
 
 ---
 
@@ -109,6 +113,7 @@ phase.lastTurn = authoritative
 - **被改写的原消息若含工具调用**，工具调用/结果块不会跟着回到上下文（伪造「我调用过某工具」会被校验器挑出来）。
 - **改写后新消息的 messageId 是全新的**（这是刻意的）。早期版本复用了原 id，客户端按 id 认消息 → 把改写版当成旧版「重新生成」，用户的新内容会消失。实测踩过。
 - **`stream` 按 content 现场生成**（block-end 序列）。现行 v4 读路径不复放 stream，但历史代迁移校验器会把 stream 重放成 blocks 与 content 深比较，自洽才安全。
+- **0.5.1 之前做过的改写无法「还原原样」**：当时没写 `source.replacedBy`，血统回溯不到原稿，面板不会出现「还原原样」按钮。此时只能手动重新改写。
 
 ---
 
