@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import zlib from 'node:zlib';
 import os from 'node:os';
 import path from 'node:path';
+import { resolveHarness } from './_lib/harness.mjs';
 
 process.env.DSH_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ctxedit-home-'));
 const plugin = await import('file:///C:/Users/AtinyFurina/Desktop/dsh-ctxedit-project/lib/index.js');
@@ -82,8 +83,7 @@ console.log(`目标用户消息 seq=${target.seq} id=${target.data.id}`);
   check(Array.isArray(carrier?.sourceEventSeqs) && carrier.sourceEventSeqs.every((s) => Number.isSafeInteger(s)), 'sourceEventSeqs 是扁平整数数组', JSON.stringify(carrier?.sourceEventSeqs));
 
   // 用安装版校验器重放整条日志：必须能恢复，且被遮蔽内容不在模型视野。
-  import { resolveHarness } from './_lib/harness.mjs';
-const ASAR = resolveHarness();
+  const ASAR = resolveHarness();
   const { Session } = await import(`file:///${ASAR}/dsh-session/lib/index.js`);
   const header = { version: 4, id: hl.id, createdAt: hl.createdAt, cwd: hl.cwd, isSeeded: false, delegationDepth: 0 };
   try {
