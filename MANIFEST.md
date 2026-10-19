@@ -10,11 +10,11 @@
 | `lib\client.js` | **插件浏览器半体**：助手动作行「更改输出」按钮 + 编辑面板（编辑/预览、改写 / 抹掉 / 还原）+ 用户消息左侧的回溯图标 + DOM 视图过滤 |
 | `package.json` | 插件清单：`dsh.bundle.patch` 与 `dsh.client` 两侧声明（版本 **0.5.0**） |
 | `cordis.patch.yml` | bundle patch：让插件既能作为 profile 相对路径行挂载，也能作为 bundle 安装 |
-| `CHANGELOG.md` | 版本记录（0.2.0 → 0.5.0；0.5.0 = 面板 UI 收尾） |
+| `CHANGELOG.md` | 版本记录（0.2.0 → 0.5.1；0.5.1 = restore 血统修复） |
 | `README.md` | 机制说明、**为什么必须同步计数器**、私有字段风险、接口、限制、回滚 |
 | `docs\COMPATIBILITY.md` | **DSH 0.2.0-rc.2 → 0.2.1-rc.2 兼容性核查**（升级前对照 + 升级后实测记录） |
 | `tools\*.mjs` | 归拢后的验证/修复工具（见下） |
-| `_lab-dont-run\*.mjs` | 当初把机制试出来的原始脚本（会直写真实日志；**历史存档，不要运行**） |
+| `_lab-dont-run\*.mjs` | 当初把机制试出来的原始脚本（会直写真实日志；**历史存档，不要运行**）。每个文件首行有「运行即抛错」守卫；该目录被 `.gitignore` 排除 → **不在版本库里，删目录即永久丢失** |
 | `_upgrade-probe\` | 0.2.1-rc.2 的 npm 包与 0.2.0 的 asar 抽取物（做 diff 用；确认升级无误后可删） |
 | `_pre-upgrade-backup-*\` | 升级前的 profile 补丁/清单 + 插件源码副本（回退用） |
 
