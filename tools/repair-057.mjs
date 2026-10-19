@@ -52,7 +52,8 @@ fs.writeFileSync(file, Buffer.concat(out));
 console.log('已修复并写入；备份:', backup);
 
 // 验证：安装版 fromRestore + deriveMessages
-const ASAR = 'C:/Users/AtinyFurina/AppData/Local/Programs/DeepSeek Harness/resources/app.asar/dsh/node_modules/@deepseek-ai';
+import { resolveHarness } from './_lib/harness.mjs';
+const ASAR = resolveHarness();
 const { Session } = await import(`file:///${ASAR}/dsh-session/lib/index.js`);
 const hl = JSON.parse(headerLine);
 const header = { version: 4, id: hl.id, createdAt: hl.createdAt, cwd: hl.cwd, isSeeded: hl.isSeeded ?? false, delegationDepth: hl.delegationDepth ?? 0 };
@@ -71,3 +72,4 @@ try {
   console.log('❌ fromRestore 仍失败:', error.message);
   process.exit(1);
 }
+

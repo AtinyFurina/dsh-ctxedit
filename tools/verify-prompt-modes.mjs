@@ -8,7 +8,8 @@ import fs from 'node:fs';
 import zlib from 'node:zlib';
 import { randomUUID } from 'node:crypto';
 
-const ASAR = 'C:/Users/AtinyFurina/AppData/Local/Programs/DeepSeek Harness/resources/app.asar/dsh/node_modules/@deepseek-ai';
+import { resolveHarness } from './_lib/harness.mjs';
+const ASAR = resolveHarness();
 const { Session } = await import(`file:///${ASAR}/dsh-session/lib/index.js`);
 const { assertReleasedV4Relationships } = await import(`file:///${ASAR}/dsh-session-format-v3-to-v4/lib/index.js`);
 const { KNOWN_SESSION_EVENT_TYPES } = await import(`file:///${ASAR}/dsh-session/lib/types/known-event-types.js`);
@@ -119,3 +120,4 @@ for (const mode of ['edit-prompt', 'rewind-edit', 'rewind-delete']) {
 }
 console.log(failed === 0 ? '全部通过' : `${failed} 项失败`);
 process.exit(failed === 0 ? 0 : 1);
+

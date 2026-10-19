@@ -18,13 +18,15 @@ import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 
-const ASAR = 'C:/Users/AtinyFurina/AppData/Local/Programs/DeepSeek Harness/resources/app.asar/dsh/node_modules/@deepseek-ai';
+import { resolveHarness } from './_lib/harness.mjs';
+
 let Session;
 try {
+  const ASAR = resolveHarness();
   ({ Session } = await import(`file:///${ASAR}/dsh-session/lib/index.js`));
 } catch (error) {
   console.log('SKIP: 宿主源码不可读（app.asar 需要 Electron-as-node；或先生成 Temp 抽出物）');
-  console.log('  运行方式见脚本头「运行方式」；原始错误：' + String(error?.message ?? error).split('\n')[0]);
+  console.log('  ' + String(error?.message ?? error).replace(/\n/g, '\n  '));
   process.exit(2);
 }
 const plugin = await import('file:///C:/Users/AtinyFurina/Desktop/dsh-ctxedit-project/lib/index.js');

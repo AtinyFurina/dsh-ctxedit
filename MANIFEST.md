@@ -36,6 +36,9 @@
 | `tools\test-carrier.mjs` / `test-prompt-ops.mjs` | 载体角色、提问侧旧模式的离线验证 | 安装版 0.2.1 校验器 |
 | `tools\migrate-turns.mjs` / `migrate-zones.mjs` / `repair-057.mjs` | **一次性迁移/修复**（已执行；不要重复跑） | 无 |
 
+宿主源码（`@deepseek-ai/*`）的来源由 **`tools/_lib/harness.mjs` 统一解析**：优先 `%TEMP%\asar-probe-ineffa` 抽出物
+（普通 node 可读），否则在 Electron-as-node 下用 `app.asar`；两者都没有时抛出带运行指引的错误。
+
 ## 外部依赖（重要）
 
 `verify-template.mjs`、`fix-turns.mjs`、`test-restore.mjs`、`test-carrier.mjs` 里的 `HARNESS` 常量指向

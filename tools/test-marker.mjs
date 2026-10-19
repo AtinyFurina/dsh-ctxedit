@@ -8,7 +8,8 @@ import fs from 'node:fs';
 import zlib from 'node:zlib';
 import { randomUUID } from 'node:crypto';
 
-const ASAR = 'C:/Users/AtinyFurina/AppData/Local/Programs/DeepSeek Harness/resources/app.asar/dsh/node_modules/@deepseek-ai';
+import { resolveHarness } from './_lib/harness.mjs';
+const ASAR = resolveHarness();
 const { Session, foldSurface } = await import(`file:///${ASAR}/dsh-session/lib/index.js`);
 const { assertReleasedV4Relationships } = await import(`file:///${ASAR}/dsh-session-format-v3-to-v4/lib/index.js`);
 const { KNOWN_SESSION_EVENT_TYPES } = await import(`file:///${ASAR}/dsh-session/lib/types/known-event-types.js`);
@@ -95,5 +96,6 @@ console.log('标记事件本身存在（界面会渲染）：', log.some((e) => 
 const starts = log.filter((e) => e.type === 'turn/start').map((e) => e.data.turn);
 console.log('轮次号连续无重复：', starts.join(',') === starts.map((_, k) => k + 1).join(','), '→', starts.slice(-4).join(','));
 process.exit(ok ? 0 : 1);
+
 
 

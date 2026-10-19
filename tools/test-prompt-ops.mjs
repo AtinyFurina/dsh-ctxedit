@@ -5,7 +5,8 @@ import fs from 'node:fs';
 import zlib from 'node:zlib';
 import { randomUUID } from 'node:crypto';
 
-const ASAR = 'C:/Users/AtinyFurina/AppData/Local/Programs/DeepSeek Harness/resources/app.asar/dsh/node_modules/@deepseek-ai';
+import { resolveHarness } from './_lib/harness.mjs';
+const ASAR = resolveHarness();
 const { Session } = await import(`file:///${ASAR}/dsh-session/lib/index.js`);
 const { assertReleasedV4Relationships } = await import(`file:///${ASAR}/dsh-session-format-v3-to-v4/lib/index.js`);
 const { KNOWN_SESSION_EVENT_TYPES } = await import(`file:///${ASAR}/dsh-session/lib/types/known-event-types.js`);
@@ -94,4 +95,5 @@ const NEW = '【提问侧验证】这是改写后的提问。';
 trial('A. edit-prompt（只换提问）', carrier(ev, { text: NEW, startSeq: prompt.seq, endSeq: prompt.seq, shadowed: [prompt.seq] }));
 trial('B. rewind-edit（换提问 + 回退到此处）', carrier(ev, { text: NEW, startSeq: prompt.seq, endSeq: lastNode, shadowed: nodes.slice(idx) }));
 trial('C. rewind-delete（撤回提问 + 回退）', carrier(ev, { text: '', startSeq: prompt.seq, endSeq: lastNode, shadowed: nodes.slice(idx) }));
+
 

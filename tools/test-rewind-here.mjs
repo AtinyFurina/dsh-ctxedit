@@ -82,7 +82,8 @@ console.log(`目标用户消息 seq=${target.seq} id=${target.data.id}`);
   check(Array.isArray(carrier?.sourceEventSeqs) && carrier.sourceEventSeqs.every((s) => Number.isSafeInteger(s)), 'sourceEventSeqs 是扁平整数数组', JSON.stringify(carrier?.sourceEventSeqs));
 
   // 用安装版校验器重放整条日志：必须能恢复，且被遮蔽内容不在模型视野。
-  const ASAR = 'C:/Users/AtinyFurina/AppData/Local/Programs/DeepSeek Harness/resources/app.asar/dsh/node_modules/@deepseek-ai';
+  import { resolveHarness } from './_lib/harness.mjs';
+const ASAR = resolveHarness();
   const { Session } = await import(`file:///${ASAR}/dsh-session/lib/index.js`);
   const header = { version: 4, id: hl.id, createdAt: hl.createdAt, cwd: hl.cwd, isSeeded: false, delegationDepth: 0 };
   try {
@@ -114,4 +115,5 @@ console.log(`目标用户消息 seq=${target.seq} id=${target.data.id}`);
 
 console.log(fail === 0 ? '\n全部通过' : `\n${fail} 项失败`);
 process.exit(fail === 0 ? 0 : 1);
+
 
