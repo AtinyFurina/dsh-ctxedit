@@ -1,114 +1,193 @@
-// 离线验证「还原原样」这条新路径：模拟 /apply mode=restore 的写入，
-// 然后喂给真实校验器 + Session.fromRestore，确认：
-//   1) 关系状态机通过（含合成轮次）；
-//   2) 模型读到的最后一条助手消息 = 原始版本的正文/思考；
-//   3) 轮次号仍严格连续。
+// 固定构造「改写 → /find 血统 → 还原」场景的回归测试。
+//
+// 行为约定（审计 §7-3）：
+//   · 输入是任意真实会话日志；先复制到临时目录，绝不动原文件；
+//   · 找不到带正文的可见助手消息 → SKIP + exit(2)；
+//   · 任何断言失败 → exit(1)；
+//   · 还原后正文必须非空且等于原稿；
+//   · 用宿主自己的 Session.fromRestore 复核最终日志可加载。
+//
+// 用法：node tools/test-restore.mjs "<session.v4.jsonl.zstd 路径>"
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import zlib from 'node:zlib';
-import { randomUUID } from 'node:crypto';
 
-const HARNESS = 'C:/Users/AtinyFurina/AppData/Local/Temp/asar-probe-ineffa/all/dsh/node_modules/@deepseek-ai';
-const { Session } = await import(`file:///${HARNESS}/dsh-session/lib/index.js`);
-const { assertReleasedV4Relationships } = await import(`file:///${HARNESS}/dsh-session-format-v3-to-v4/lib/index.js`);
-const { KNOWN_SESSION_EVENT_TYPES } = await import(`file:///${HARNESS}/dsh-session/lib/types/known-event-types.js`);
+const ASAR = 'C:/Users/AtinyFurina/AppData/Local/Programs/DeepSeek Harness/resources/app.asar/dsh/node_modules/@deepseek-ai';
+const { Session } = await import(`file:///${ASAR}/dsh-session/lib/index.js`);
+const plugin = await import('file:///C:/Users/AtinyFurina/Desktop/dsh-ctxedit-project/lib/index.js');
 
-const M = Buffer.from([0x28, 0xb5, 0x2f, 0xfd]);
-const buf = fs.readFileSync(process.argv[2]);
-const b = []; let i = 0;
-while ((i = buf.indexOf(M, i)) !== -1) { b.push(i); i += 4 }
-b.push(buf.length);
-let t = '';
-for (let k = 0; k < b.length - 1; k++) { try { t += zlib.zstdDecompressSync(buf.subarray(b[k], b[k + 1])).toString('utf8') } catch {} }
-const lines = t.split('\n').filter(Boolean);
-const hl = JSON.parse(lines[0]);
-const ev = lines.slice(1).map((l) => JSON.parse(l));
-const header = { version: 4, id: hl.id, createdAt: hl.createdAt, cwd: hl.cwd, isSeeded: false, delegationDepth: 0 };
+const source = process.argv[2];
+if (typeof source !== 'string' || source.length === 0) {
+  console.log('用法: node tools/test-restore.mjs <session.v4.jsonl.zstd>');
+  process.exit(2);
+}
+if (!fs.existsSync(source)) {
+  console.log(`SKIP: 日志不存在：${source}`);
+  process.exit(2);
+}
 
-// —— 与插件 lib/index.js 同源的两段逻辑 ——
-const SURF = new Set(['system/message', 'developer/message', 'user/message', 'assistant/message', 'tool/result']);
-function foldNodes(list) {
+const temp = path.join(os.tmpdir(), `ctxedit-test-restore-${Date.now()}.zstd`);
+fs.copyFileSync(source, temp);
+
+const MAGIC = Buffer.from([0x28, 0xb5, 0x2f, 0xfd]);
+const buf = fs.readFileSync(temp);
+const frames = [];
+let offset = 0;
+while ((offset = buf.indexOf(MAGIC, offset)) !== -1) { frames.push(offset); offset += 4 }
+frames.push(buf.length);
+let text = '';
+for (let k = 0; k < frames.length - 1; k += 1) {
+  try { text += zlib.zstdDecompressSync(buf.subarray(frames[k], frames[k + 1])).toString('utf8') } catch { /* 非帧边界 */ }
+}
+const lines = text.split('\n').filter(Boolean);
+const headerLine = JSON.parse(lines[0]);
+const events = lines.slice(1).map((line) => JSON.parse(line));
+
+const session = {
+  id: headerLine.id,
+  snapshotEvents: () => events,
+  append(type, data, opts) {
+    const event = { type, seq: events.length, time: Date.now(), data, ...(opts ?? {}) };
+    events.push(event);
+    return event;
+  },
+};
+
+const routes = {};
+const ctx = {
+  effect(fn) { fn() },
+  get(name) {
+    if (name === 'sessions') {
+      return {
+        get: (id) => (id === session.id ? session : undefined),
+        list: () => [session],
+        flush: async () => {},
+      };
+    }
+    return undefined;
+  },
+  webServer: { register(route) { routes[route.path] = route; return () => {} } },
+};
+plugin.apply(ctx);
+
+function response() {
+  const out = { status: null, body: null };
+  return {
+    writeHead(status) { out.status = status },
+    end(payload) { try { out.body = JSON.parse(payload) } catch { out.body = payload } },
+    out,
+  };
+}
+const getRequest = (url) => ({ method: 'GET', url, headers: { host: '127.0.0.1:1' }, socket: { remoteAddress: '127.0.0.1' } });
+const postRequest = (url, body) => {
+  const payload = Buffer.from(JSON.stringify(body), 'utf8');
+  return {
+    method: 'POST',
+    url,
+    headers: { host: '127.0.0.1:1', 'content-type': 'application/json' },
+    socket: { remoteAddress: '127.0.0.1' },
+    async *[Symbol.asyncIterator]() { yield payload },
+  };
+};
+
+const SURFACE = new Set(['system/message', 'developer/message', 'user/message', 'assistant/message', 'tool/result']);
+function fold(list) {
   const nodes = [];
-  for (const e of list) {
-    if (!SURF.has(e.type)) continue;
-    const op = e.surfaceOp;
-    if (op === 'append') { nodes.push(e.seq); continue }
+  for (const event of list) {
+    if (!SURFACE.has(event.type)) continue;
+    const op = event.surfaceOp;
+    if (op === 'append') { nodes.push(event.seq); continue }
     if (op && typeof op === 'object' && op.op === 'replace') {
-      const a = nodes.indexOf(op.startSeq), c = nodes.indexOf(op.endSeq);
-      if (a >= 0 && c >= a) nodes.splice(a, c - a + 1, e.seq);
+      const first = nodes.indexOf(op.startSeq);
+      const last = nodes.indexOf(op.endSeq);
+      if (first >= 0 && last >= first) nodes.splice(first, last - first + 1, event.seq);
     }
   }
   return nodes;
 }
-function shadowLineage(list, nodeSeq) {
-  const bySeq = new Map(list.map((e) => [e.seq, e]));
-  const chain = [nodeSeq];
-  let cur = nodeSeq;
-  for (let hops = 0; hops < 16; hops += 1) {
-    const e = bySeq.get(cur);
-    if (!e || !(e.surfaceOp && typeof e.surfaceOp === 'object')) break;
-    const shadowed = e.surfaceOp.startSeq;
-    if (typeof shadowed !== 'number' || shadowed === cur) break;
-    chain.push(shadowed);
-    cur = shadowed;
-  }
-  return { originSeq: chain[chain.length - 1], rewrites: chain.length - 1, chain };
-}
-function nextTurnOf(list) {
-  let max = 0;
-  for (const e of list) if (e.type === 'turn/start' || e.type === 'turn/end') { const v = e.data?.turn; if (typeof v === 'number' && v > max) max = v }
-  return max + 1;
+const textOf = (content) => (Array.isArray(content) ? content.filter((c) => c?.type === 'text').map((c) => c.text ?? '').join('') : '');
+
+let failed = 0;
+function check(ok, name, detail = '') {
+  console.log(`${ok ? '✅' : '❌'} ${name}${detail ? '  → ' + detail : ''}`);
+  if (!ok) failed += 1;
 }
 
-const nodes = foldNodes(ev);
-// 找一条「被改写过」的可见节点来还原：它的血统长度 > 1
-// （改写后当前可见的是「载体」或「新助手消息」，两者都记着 surfaceOp，可以顺着回溯到原稿）
-const candidate = [...nodes].reverse()
-  .map((s) => ({ s, lin: shadowLineage(ev, s) }))
-  .find((x) => x.lin.rewrites > 0);
-if (!candidate) { console.log('这条日志里没有「被改写过的节点」可用于测试还原'); process.exit(0) }
-const { s: targetSeq, lin } = candidate;
-const origin = ev[lin.originSeq];
-const origText = (origin.data?.message?.content ?? []).filter((c) => c.type === 'text').map((c) => c.text).join('');
-console.log(`目标 seq=${targetSeq}（${ev[targetSeq]?.type}，被改过 ${lin.rewrites} 次，血统 ${lin.chain.join('→')}）`);
-console.log(`原始版本 seq=${lin.originSeq}（${origin?.type}），正文 ${JSON.stringify(origText.slice(0, 60))}`);
+const bySeq = new Map(events.map((event) => [event.seq, event]));
+const visible = fold(events).map((seq) => bySeq.get(seq));
+const target = [...visible].reverse().find((event) => event?.type === 'assistant/message' && textOf(event.data?.message?.content).trim().length > 0);
+if (target === undefined) {
+  console.log('SKIP: 这条日志里没有带正文的可见助手消息');
+  process.exit(2);
+}
+const originalSeq = target.seq;
+const originalText = textOf(target.data.message.content);
+const marker = `【test-restore】改写版 ${Date.now()}`;
+console.log(`目标助手消息 seq=${originalSeq} turn=${target.data?.turn} 正文=${JSON.stringify(originalText.slice(0, 24))}`);
 
-// 模拟插件的 restore：遮蔽当前 + 写入原稿为新的助手消息（新 id，合成轮次）
-const turn = nextTurnOf(ev);
-let seq = ev.length;
-const now = Date.now();
-const content = [{ type: 'reasoning', text: '【还原测试】原始思考' }, { type: 'text', text: origText }];
-const batch = [
-  { type: 'user/message', seq: seq++, time: now, surfaceOp: { op: 'replace', startSeq: targetSeq, endSeq: targetSeq }, sourceEventSeqs: [targetSeq], data: { id: randomUUID(), role: 'user', content: [], source: { kind: 'plugin:ctxedit' } } },
-  { type: 'turn/start', seq: seq++, time: now, data: { turn } },
-  { type: 'step/start', seq: seq++, time: now, data: { turn, step: 1 } },
-  { type: 'assistant/message', seq: seq++, time: now, surfaceOp: 'append',
-    data: { turn, step: 1, message: { id: randomUUID(), role: 'assistant', content, source: { kind: 'model', provider: 'deepseek-official', model: 'context-edit' } },
-      stream: content.map((blk, idx) => ({ type: 'chunk', time: now + idx, chunk: { type: 'block-end', index: idx, block: blk } })) } },
-  { type: 'step/end', seq: seq++, time: now, data: { turn, step: 1 } },
-  { type: 'turn/end', seq: seq++, time: now, data: { turn, reason: { kind: 'completed' } } },
-];
-const log = [...ev, ...batch];
+// 1) 改写
+const rewriteResponse = response();
+await routes['/api/dsh-ctxedit/apply'].handler(postRequest('/api/dsh-ctxedit/apply', {
+  messageId: target.data.message.id,
+  mode: 'rewrite',
+  text: marker,
+  reasoning: '',
+}), rewriteResponse);
+check(rewriteResponse.out.status === 200, '/apply rewrite 返回 200', String(rewriteResponse.out.status) + (rewriteResponse.out.body?.error ? ' ' + rewriteResponse.out.body.error : ''));
 
-const res = (n, fn) => { try { const r = fn(); console.log('✅ ' + n + (r ? '  → ' + r : '')) } catch (e) { console.log('❌ ' + n + '  !! ' + String(e?.message ?? e).slice(0, 140)) } };
-console.log('\n追加：' + batch.map((e) => e.type).join(' → ') + `（合成轮次 ${turn}）`);
-res('关系状态机', () => { assertReleasedV4Relationships({ header, inheritedEventCount: 0, events: log }, KNOWN_SESSION_EVENT_TYPES); return '通过' });
-res('Session.fromRestore + 模型读到的末条助手消息', () => {
-  const s = Session.fromRestore(hl.id, log, header, 0, 'detached');
-  const m = s.deriveMessages();
-  const last = [...m].reverse().find((x) => x.role === 'assistant');
-  const txt = (last.content ?? []).filter((c) => c.type === 'text').map((c) => c.text).join('');
-  const think = (last.content ?? []).filter((c) => c.type === 'reasoning').map((c) => c.text).join('');
-  if (txt !== origText) throw new Error('还原后的正文与原始版本不一致');
-  return `原稿已回到视野：${JSON.stringify(txt.slice(0, 40))}　思考=${JSON.stringify(think.slice(0, 20))}`;
-});
-res('轮次号严格连续', () => {
-  const st = log.filter((e) => e.type === 'turn/start').map((e) => e.data.turn);
-  if (st.join(',') !== st.map((_, k) => k + 1).join(',')) throw new Error('不连续: ' + st.join(','));
-  return st.join(',');
-});
-res('可见助手消息无同 id 重复', () => {
-  const ids = foldNodes(log).map((s) => log[s]).filter((e) => e?.type === 'assistant/message').map((e) => e.data?.message?.id);
-  const dup = ids.filter((id, k) => ids.indexOf(id) !== k);
-  if (dup.length) throw new Error('重复 id: ' + [...new Set(dup)].join(','));
-  return ids.length + ' 条，全唯一';
-});
+const rewritten = events.filter((event) => event.type === 'assistant/message').at(-1)?.data?.message;
+check(rewritten !== undefined && rewritten.id !== target.data.message.id, '改写生成了新 messageId', rewritten?.id ?? 'undefined');
+
+// 2) /find 血统
+const findRewritten = response();
+await routes['/api/dsh-ctxedit/find'].handler(getRequest(`/api/dsh-ctxedit/find?messageId=${encodeURIComponent(rewritten.id)}`), findRewritten);
+const history = findRewritten.out.body?.history;
+check(findRewritten.out.status === 200, '/find 返回 200', String(findRewritten.out.status));
+check(history?.rewrites === 1, 'history.rewrites === 1', JSON.stringify(history));
+check(history?.originSeq === originalSeq, `history.originSeq === 原稿 seq (${originalSeq})`, String(history?.originSeq));
+check(findRewritten.out.body?.row?.text === marker, '改写版正文正确', JSON.stringify((findRewritten.out.body?.row?.text ?? '').slice(0, 24)));
+
+// 3) 还原
+const restoreResponse = response();
+await routes['/api/dsh-ctxedit/apply'].handler(postRequest('/api/dsh-ctxedit/apply', {
+  messageId: rewritten.id,
+  mode: 'restore',
+  text: '',
+  reasoning: '',
+}), restoreResponse);
+check(restoreResponse.out.status === 200, '/apply restore 返回 200', String(restoreResponse.out.status) + (restoreResponse.out.body?.error ? ' ' + restoreResponse.out.body.error : ''));
+
+const restored = events.filter((event) => event.type === 'assistant/message').at(-1)?.data?.message;
+const restoredText = textOf(restored?.content);
+check(restoredText.length > 0, '还原后的正文非空', JSON.stringify(restoredText.slice(0, 24)));
+check(restoredText === originalText, '还原后的正文 === 原稿正文', `原稿 ${JSON.stringify(originalText.slice(0, 20))} vs 还原 ${JSON.stringify(restoredText.slice(0, 20))}`);
+
+const findRestored = response();
+await routes['/api/dsh-ctxedit/find'].handler(getRequest(`/api/dsh-ctxedit/find?messageId=${encodeURIComponent(restored.id)}`), findRestored);
+check(findRestored.out.body?.history?.originSeq === originalSeq, '还原版的 originSeq 仍指向原稿', String(findRestored.out.body?.history?.originSeq));
+
+// 4) 宿主恢复校验
+const header = {
+  version: 4,
+  id: headerLine.id,
+  createdAt: headerLine.createdAt,
+  cwd: headerLine.cwd,
+  parentSession: headerLine.parentSession,
+  agentPreset: headerLine.agentPreset,
+  isSeeded: headerLine.isSeeded ?? false,
+  delegationDepth: headerLine.delegationDepth ?? 0,
+};
+try {
+  const restoredSession = Session.fromRestore(headerLine.id, events, header, 0, 'detached');
+  const messages = restoredSession.deriveMessages();
+  const lastAssistant = [...messages].reverse().find((message) => message.role === 'assistant');
+  const lastText = textOf(lastAssistant?.content);
+  check(lastText === originalText, 'fromRestore 后最后一条 assistant === 原稿', JSON.stringify(lastText.slice(0, 24)));
+} catch (error) {
+  check(false, 'Session.fromRestore 能加载最终日志', error.message);
+}
+
+fs.rmSync(temp, { force: true });
+console.log(failed === 0 ? '\n全部通过' : `\n${failed} 项失败`);
+process.exit(failed === 0 ? 0 : 1);
