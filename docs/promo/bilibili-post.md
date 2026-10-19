@@ -4,8 +4,8 @@
 
 | 平台 | 文件 | 规格 |
 |---|---|---|
-| B 站 | `docs/promo/video/bilibili-1080p.mp4` | 1920×1080 · 30fps · 22s · H.264 + AAC |
-| 小红书 | `docs/promo/video/xiaohongshu-vertical.mp4` | 1080×1920 · 30fps · 22s · H.264 + AAC |
+| B 站 | `docs/promo/video/bilibili-1080p.mp4` | 1920×1080 · 30fps · 24s · H.264 + AAC（MIDI 配乐） |
+| 小红书 | `docs/promo/video/xiaohongshu-vertical.mp4` | 1080×1920 · 30fps · 24s · H.264 + AAC（MIDI 配乐） |
 
 封面：`docs/promo/social-preview.png`（B 站可再用 `docs/promo/video/code/h.html` 渲一帧）
 
@@ -72,3 +72,4 @@ dsh-ctxedit：DeepSeek Harness 的上下文编辑插件。
 - 视频是 22 秒竖/横两版，B 站建议加「未经作者授权禁止转载」；
 - 小红书外链限流：正文不写链接，链接放评论区第一条；
 - 若平台要求封面，用 social-preview.png 裁 16:9 / 3:4。
+
