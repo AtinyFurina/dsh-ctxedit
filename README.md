@@ -42,7 +42,10 @@ DSH 的会话日志分两层：落盘的事件日志（append-only）与**模型
 
 1. **只有非 assistant 载体能做替换**。`assistant/message` 一旦带 `sourceEventSeqs` 会被拒：
    `assistant/message embeds its source stream and cannot carry sourceEventSeqs`。
-   所以「遮蔽」用**无回合的 user/message 空内容载体**做（空内容不会投影成消息）。
+   所以「遮蔽」用**无回合的 user/message 空内容载体**做。
+   **已知代价**：空 content 的 user/message 仍会投影成 1 条空 user 消息进入模型请求
+   （`dsh-session/lib/types/surface.js:85-87` 对 user/message 直接 `return event.data`）；
+   只有空 `system` / `developer` 才不投影，但它们必须落在开着的 step 里，成本更高，暂不采用。
 2. **模型可见的 assistant 内容必须落在「开着的 turn + step」里**，且 `turn/step` 要与当前开着的完全一致。
    插件自己开一个**合成轮次**来承载改写后的消息。
 3. **合成轮次必须带结算字段**：`data.turn`、`data.step`、`message`、`stream`（数组，且与 content 自洽）。
