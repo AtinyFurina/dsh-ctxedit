@@ -7,7 +7,8 @@ import fs from 'node:fs';
 import zlib from 'node:zlib';
 import { randomUUID } from 'node:crypto';
 
-const HARNESS = 'C:/Users/AtinyFurina/AppData/Local/Temp/asar-probe-ineffa/all/dsh/node_modules/@deepseek-ai';
+import { resolveHarness } from './_lib/harness.mjs';
+const HARNESS = resolveHarness();
 const { foldSurface } = await import(`file:///${HARNESS}/dsh-session/lib/types/surface.js`);
 const { Session } = await import(`file:///${HARNESS}/dsh-session/lib/index.js`);
 const { assertReleasedV4Relationships, restoreReleasedV4Artifact } = await import(`file:///${HARNESS}/dsh-session-format-v3-to-v4/lib/index.js`);
@@ -160,3 +161,4 @@ try {
 }
 
 process.exit(results.some((r) => r[0] === 'FAIL') ? 1 : 0);
+

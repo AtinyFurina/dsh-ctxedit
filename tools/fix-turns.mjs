@@ -13,7 +13,8 @@
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 
-const HARNESS = 'C:/Users/AtinyFurina/AppData/Local/Temp/asar-probe-ineffa/all/dsh/node_modules/@deepseek-ai';
+import { resolveHarness } from './_lib/harness.mjs';
+const HARNESS = resolveHarness();
 const { assertReleasedV4Relationships } = await import(`file:///${HARNESS}/dsh-session-format-v3-to-v4/lib/index.js`);
 const { KNOWN_SESSION_EVENT_TYPES } = await import(`file:///${HARNESS}/dsh-session/lib/types/known-event-types.js`);
 
@@ -94,3 +95,4 @@ fs.copyFileSync(path, backup);
 fs.writeFileSync(path, Buffer.concat([headerFrame, bodyFrame]));
 console.log(`\n已写回。备份：${backup}`);
 console.log('注意：物理布局被合并为「header 帧 + 一帧事件」，与持久化层的分批写法不同，但读取路径按帧独立解码，语义等价。');
+

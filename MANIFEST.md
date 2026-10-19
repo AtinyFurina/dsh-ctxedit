@@ -24,8 +24,8 @@
 |---|---|---|
 | `tools\verify-host.mjs` | **升级后自检**：读会话日志 → 打 `/find` `/diagnose` → 判定计数器同步仍可用 | 运行中的 GUI |
 | `tools\check-log.mjs` | 只读打印任意会话日志结构：轮次号、可见节点、替换事件、重复检查 | 无（纯 node） |
-| `tools\verify-template.mjs` | 拿真实日志 + 真实校验器验证写入模板 | 见下「外部依赖」 |
-| `tools\fix-turns.mjs` | 修复「重复轮次号」（先 dry-run，`--write` 落盘；**需 DSH 已关闭**） | 见下 |
+| `tools\verify-template.mjs` | 拿真实日志 + 真实校验器验证写入模板 | `tools/_lib/harness.mjs` |
+| `tools\fix-turns.mjs` | 修复「重复轮次号」（先 dry-run，`--write` 落盘；**需 DSH 已关闭**） | `tools/_lib/harness.mjs` |
 | `tools\repair-dup.mjs` | 清理同 `messageId` 的重复可见版本（dry-run 默认） | 无 |
 | `tools\test-restore.mjs` | **固定构造「改写 → /find 血统 → 还原」**，失败 `exit(1)`、无候选 `exit(2)` | 安装版 0.2.1 校验器 |
 | `tools\test-rewind-here.mjs` | 就地回溯：区间遮蔽、`zones`、扁平 `sourceEventSeqs`、模型视野无泄漏 | 同上 |
@@ -41,14 +41,10 @@
 
 ## 外部依赖（重要）
 
-`verify-template.mjs`、`fix-turns.mjs`、`test-restore.mjs`、`test-carrier.mjs` 里的 `HARNESS` 常量指向
-**从 app.asar 抽出来的 @deepseek-ai 包**：
+**所有脚本通过 `tools/_lib/harness.mjs` 解析宿主源码**：优先 `%TEMP%\asar-probe-ineffa` 抽出物
+（普通 node 可读），否则在 Electron-as-node 下用 `app.asar`；两者都没有时抛出带运行指引的错误。
 
-```
-C:\Users\AtinyFurina\AppData\Local\Temp\asar-probe-ineffa\all\dsh\node_modules\@deepseek-ai
-```
-
-那是**临时目录**（会被系统清理），且节点脚本要用 Electron 当 node 跑：
+Temp 抽出物会被系统清理；被清理后按脚本头提示用 Electron-as-node，或重新生成：
 
 ```powershell
 $env:ELECTRON_RUN_AS_NODE="1"
