@@ -29,7 +29,7 @@ try {
   console.log('  ' + String(error?.message ?? error).replace(/\n/g, '\n  '));
   process.exit(2);
 }
-const plugin = await import('file:///C:/Users/AtinyFurina/Desktop/dsh-ctxedit-project/lib/index.js');
+const plugin = await import(new URL('../lib/index.js', import.meta.url).href);
 
 const source = process.argv[2];
 if (typeof source !== 'string' || source.length === 0) {
@@ -205,3 +205,4 @@ try {
 fs.rmSync(temp, { force: true });
 console.log(failed === 0 ? '\n全部通过' : `\n${failed} 项失败`);
 process.exit(failed === 0 ? 0 : 1);
+

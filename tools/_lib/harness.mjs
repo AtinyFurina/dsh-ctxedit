@@ -13,7 +13,9 @@ import os from 'node:os';
 import path from 'node:path';
 
 const TEMP_HARNESS = path.join(os.tmpdir(), 'asar-probe-ineffa', 'all', 'dsh', 'node_modules', '@deepseek-ai');
-const ASAR_HARNESS = 'C:/Users/AtinyFurina/AppData/Local/Programs/DeepSeek Harness/resources/app.asar/dsh/node_modules/@deepseek-ai';
+// 其他机器上可用 DSH_ASAR_HARNESS 覆盖（指向解包后的 @deepseek-ai 目录）。
+const ASAR_HARNESS = process.env.DSH_ASAR_HARNESS
+  ?? 'C:/Users/AtinyFurina/AppData/Local/Programs/DeepSeek Harness/resources/app.asar/dsh/node_modules/@deepseek-ai';
 
 /**
  * @returns {string} 可直接拼 `file:///${harness}/<pkg>/lib/index.js` 的目录。

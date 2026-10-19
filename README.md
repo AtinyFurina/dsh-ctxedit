@@ -146,3 +146,14 @@ phase.lastTurn = authoritative
 | `check-log.mjs` | 打印任意会话日志的轮次结构 / 可见节点 / 替换事件 |
 | `test-restore.mjs` | **固定场景回归测试**：真实日志副本上跑 改写 → `/find` 血统 → 还原 → `fromRestore`；需要真实日志入参（运行方式见脚本头，app.asar 需 Electron-as-node） |
 | `fix-turns.mjs` | 修复「重复轮次号」（先 dry-run，`--write` 才落盘；需 DSH 已关闭） |
+
+宿主源码路径由 [`tools/_lib/harness.mjs`](tools/_lib/harness.mjs) 统一解析；其他机器可用环境变量
+`DSH_ASAR_HARNESS` 指向解包后的 `@deepseek-ai` 目录。
+
+---
+
+## License
+
+MIT © 2026 AtinyFurina。见 [LICENSE](LICENSE)。
+
+> `docs/AUDIT-*.md` 是开发期的内部审计记录，含本机路径与会话片段，仅作工程留档；不参与插件运行。

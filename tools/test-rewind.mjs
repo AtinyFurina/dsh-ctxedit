@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 
-const plugin = await import('file:///C:/Users/AtinyFurina/Desktop/dsh-ctxedit-project/lib/index.js');
+const plugin = await import(new URL('../lib/index.js', import.meta.url).href);
 
 const M = Buffer.from([0x28, 0xb5, 0x2f, 0xfd]);
 const buf = fs.readFileSync(process.argv[2]);
@@ -153,3 +153,4 @@ const prompt = promptsRes.out.body.prompts[0];
 
 console.log(failures === 0 ? '\n全部通过' : `\n${failures} 项失败`);
 process.exit(failures === 0 ? 0 : 1);
+

@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 
-const plugin = await import('file:///C:/Users/AtinyFurina/Desktop/dsh-ctxedit-project/lib/index.js');
+const plugin = await import(new URL('../lib/index.js', import.meta.url).href);
 
 const M = Buffer.from([0x28, 0xb5, 0x2f, 0xfd]);
 const buf = fs.readFileSync(process.argv[2]);
@@ -86,4 +86,5 @@ console.log(`目标助手消息 seq=${target.seq} turn=${target.data.turn}`);
 
 console.log(fail === 0 ? '\n全部通过' : `\n${fail} 项失败`);
 process.exit(fail === 0 ? 0 : 1);
+
 
