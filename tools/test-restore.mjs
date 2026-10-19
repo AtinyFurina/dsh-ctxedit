@@ -7,14 +7,26 @@
 //   · 还原后正文必须非空且等于原稿；
 //   · 用宿主自己的 Session.fromRestore 复核最终日志可加载。
 //
-// 用法：node tools/test-restore.mjs "<session.v4.jsonl.zstd 路径>"
+// 运行方式（优先方式一：能读 app.asar 内的宿主源码）：
+//   # 方式一（推荐）
+//   $env:ELECTRON_RUN_AS_NODE="1"
+//   & "C:\Users\AtinyFurina\AppData\Local\Programs\DeepSeek Harness\DeepSeek Harness.exe" tools\test-restore.mjs "<log>"
+//   # 方式二（普通 node，需要 Temp 抽出物存在；否则会 SKIP + exit 2）
+//   node tools\test-restore.mjs "<log>"
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 
 const ASAR = 'C:/Users/AtinyFurina/AppData/Local/Programs/DeepSeek Harness/resources/app.asar/dsh/node_modules/@deepseek-ai';
-const { Session } = await import(`file:///${ASAR}/dsh-session/lib/index.js`);
+let Session;
+try {
+  ({ Session } = await import(`file:///${ASAR}/dsh-session/lib/index.js`));
+} catch (error) {
+  console.log('SKIP: 宿主源码不可读（app.asar 需要 Electron-as-node；或先生成 Temp 抽出物）');
+  console.log('  运行方式见脚本头「运行方式」；原始错误：' + String(error?.message ?? error).split('\n')[0]);
+  process.exit(2);
+}
 const plugin = await import('file:///C:/Users/AtinyFurina/Desktop/dsh-ctxedit-project/lib/index.js');
 
 const source = process.argv[2];
